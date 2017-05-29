@@ -80,7 +80,7 @@ function seedModelC(req, res){
 }
 
 function seedQuery(data, cb){
-  return fix(data, cb).asCallback(cb);
+  return fix(data, cb);
 }
 
 function seedQueryC(req, res){
