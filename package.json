@@ -1,0 +1,59 @@
+{
+  "name": "sails-hook-spore",
+  "version": "1.0.0",
+  "description": "Sails hook designed to seed models from Sequelize",
+  "main": "index.js",
+  "sails": {
+    "isHook": true,
+    "hookName": "spore"
+  },
+  "scripts": {
+    "test": "node ./node_modules/mocha/bin/mocha test/bootstrap.test.js test --recursive"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/malpercio/sails-hook-spore.git"
+  },
+  "keywords": [
+    "sequelize",
+    "sails",
+    "hook",
+    "sails-hook",
+    "seed",
+    "spore",
+    "catalogs"
+  ],
+  "author": "malpercio",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/malpercio/sails-hook-spore/issues"
+  },
+  "homepage": "https://github.com/malpercio/sails-hook-spore#readme",
+  "dependencies": {
+    "bluebird": "^3.5.0",
+    "bluebird-retry": "^0.10.1",
+    "faker": "^4.1.0",
+    "lodash": "^4.17.4"
+  },
+  "devDependencies": {
+    "grunt": "1.0.1",
+    "grunt-contrib-clean": "1.0.0",
+    "grunt-contrib-coffee": "1.0.0",
+    "grunt-contrib-concat": "1.0.1",
+    "grunt-contrib-copy": "1.0.0",
+    "grunt-contrib-cssmin": "1.0.1",
+    "grunt-contrib-jst": "1.0.0",
+    "grunt-contrib-less": "1.3.0",
+    "grunt-contrib-uglify": "1.0.1",
+    "grunt-contrib-watch": "1.0.0",
+    "grunt-sails-linker": "~0.10.1",
+    "grunt-sync": "0.5.2",
+    "mocha": "^3.2.0",
+    "mysql": "^2.13.0",
+    "sails": "^0.12.13",
+    "should": "^10.0.0",
+    "supertest-as-promised": "^4.0.2",
+    "supertest": "^2.0.1",
+    "sails-hook-sequelize": "^1.0.1"
+  }
+}
