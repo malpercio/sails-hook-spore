@@ -29,6 +29,8 @@ function* Restaurant(){
 }
 
 module.exports.spore = {
+  //Only necessary if you're not using sails-hook-sequelize as your orm replace hook
+  ormHook: 'fireline',
   //Catalogs are static entries in your database.
   catalogs: {
     //This is used to prevent the unseed of catalogs
@@ -89,5 +91,23 @@ module.exports.spore = {
   ]
 };
 
+
+```
+
+If you have to run a function after the model is instantiated, you can add a
+method to your object `afterCreate`.
+
+```js
+{
+  model: 'TableType',
+  data: {
+    id: 4,
+    name: 'Grande',
+  },
+  afterCreate: (tableCreated, cb) => {
+    console.log(tableCreated.name);
+    cb();
+  }
+},
 
 ```

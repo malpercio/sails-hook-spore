@@ -14,8 +14,16 @@ function ensureArray(data){
 function fix(json, cb){
   json = ensureArray(json);
   return Promise.mapSeries(json, (object) => {
-    return global[object.model].findOrCreate({where:object.data});
-  }).asCallback(cb);
+    return global[object.model].findOrCreate({where:object.data})
+      .then(([objectCreated]) => {
+        if(!object.afterCreate){
+          return Promise.resolve();
+        }
+        let promiseFunction = Promise.promisify(object.afterCreate);
+        return promiseFunction(objectCreated);
+      });
+  })
+   .asCallback(cb);
 }
 
 function seed(model, json, cb){
@@ -69,7 +77,6 @@ function seedModelC(req, res){
       });
     })
     .catch((err) => {
-      console.log(err);
       return res.status(500).json({
         model: req.params.model,
         status: 'error',
@@ -165,6 +172,7 @@ module.exports = (sails) => {
   return {
 
     configure: () => {
+      sails.config.spore.ormHook = sails.config.spore.ormHook? sails.config.spore.ormHook: 'sequelize';
       if(sails.config.environment === 'production'){
         sails.hooks.spore.routes = {};
       }
@@ -202,7 +210,7 @@ module.exports = (sails) => {
 
     initialize: (next) => {
       let hooks = [
-        'hook:sequelize:loaded',
+        'hook:' + sails.config.spore.ormHook + ':loaded',
       ];
       sails.after(hooks, () => {
         fillCatalog(sails.config.spore.catalogs.data, next);
