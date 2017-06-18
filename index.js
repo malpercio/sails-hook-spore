@@ -1,7 +1,12 @@
 const Promise = require('bluebird');
 const each = require('lodash/forEach');
+const forOwn = require('lodash/forOwn');
+const isObject = require('lodash/isObject');
 const includes = require('lodash/includes');
+const camelCase = require('lodash/camelCase');
 const isArray = require('lodash/isArray');
+const pickBy = require('lodash/pickBy');
+const omitBy = require('lodash/omitBy');
 const retry = require('bluebird-retry');
 
 function ensureArray(data){
@@ -11,17 +16,68 @@ function ensureArray(data){
   return data;
 }
 
+function getValue(attrib){
+  if(isArray(attrib)){
+    return Promise.map(attrib, (element) => {
+      return getValue(element);
+    });
+  }else if(isObject(attrib)){
+    return fix(attrib)
+      .then(([id]) => {
+        return id;
+      });
+  }else{
+    return Promise.resolve(attrib);
+  }
+}
+
+function treatQuery(data){
+  let query = {};
+  for (let attrib in data) {
+    query[attrib] = getValue(data[attrib]);
+  }
+  return Promise.props(query);
+}
+
 function fix(json, cb){
   json = ensureArray(json);
   return Promise.mapSeries(json, (object) => {
-    return global[object.model].findOrCreate({where:object.data})
+    return treatQuery(object.data)
+      .then((query) => {
+        let processedQuery = {
+          attributes: new Promise(function(resolve, reject) {
+            resolve(omitBy(query, isArray));
+          }),
+          associations: new Promise(function(resolve, reject) {
+            resolve(pickBy(query, isArray));
+          }),
+        };
+        return Promise.props(processedQuery);
+      })
+      .then((query) => {
+        let results = [
+          global[object.model].findOrCreate({where: query.attributes}),
+          query,
+        ];
+        return Promise.all(results)
+      })
+      .then(([[instance], query]) => {
+        let associations = Promise.map(Object.keys(query.associations), (key) => {
+          let assignment = camelCase('set ' + key);
+          return instance[assignment](query.associations[key]);
+        });
+        return Promise.all([instance,associations]);
+      })
       .then(([objectCreated]) => {
         if(!object.afterCreate){
-          return Promise.resolve();
+          return Promise.resolve([objectCreated.id]);
         }
         let promiseFunction = Promise.promisify(object.afterCreate);
-        return promiseFunction(objectCreated);
-      });
+        return Promise.all(objectCreated.id, promiseFunction(objectCreated));
+      })
+      .then(([objectID]) => {
+        return objectID;
+      })
   })
    .asCallback(cb);
 }
@@ -162,10 +218,8 @@ function unseedModelC(req, res){
     });
 }
 
-function fillCatalog(catalog, cb){
-  return Promise.mapSeries(catalog, (object) => {
-    return global[object.model].findOrCreate({where:object.data});
-  }).asCallback(cb);
+function fillCatalog(cb){
+  return fix(sails.config.spore.catalogs.data, cb);
 }
 
 module.exports = (sails) => {
@@ -213,7 +267,7 @@ module.exports = (sails) => {
         'hook:' + sails.config.spore.ormHook + ':loaded',
       ];
       sails.after(hooks, () => {
-        fillCatalog(sails.config.spore.catalogs.data, next);
+        fillCatalog(next);
       });
     },
     fillCatalog,
