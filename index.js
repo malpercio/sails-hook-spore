@@ -61,7 +61,8 @@ function fix(json, cb){
         ];
         return Promise.all(results)
       })
-      .then(([[instance], query]) => {
+      .then(([instance, query]) => {
+        instance = isArray(instance)? instance[0]: instance;
         let associations = Promise.map(Object.keys(query.associations), (key) => {
           let assignment = camelCase('set ' + key);
           return instance[assignment](query.associations[key]);
