@@ -1,6 +1,6 @@
 {
   "name": "sails-hook-spore",
-  "version": "1.2.1",
+  "version": "1.2.2",
   "description": "Sails hook designed to seed models from Sequelize",
   "main": "index.js",
   "sails": {
@@ -36,6 +36,7 @@
     "lodash": "^4.17.4"
   },
   "devDependencies": {
+    "debug": "^2.6.8",
     "grunt": "1.0.1",
     "grunt-contrib-clean": "1.0.0",
     "grunt-contrib-coffee": "1.0.0",

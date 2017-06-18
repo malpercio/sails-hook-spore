@@ -8,6 +8,7 @@ const isArray = require('lodash/isArray');
 const pickBy = require('lodash/pickBy');
 const omitBy = require('lodash/omitBy');
 const retry = require('bluebird-retry');
+const debug = require('debug');
 
 function ensureArray(data){
   if(!isArray(data)){
@@ -40,6 +41,7 @@ function treatQuery(data){
 }
 
 function fix(json, cb){
+  const error = debug('spore:seed')
   json = ensureArray(json);
   return Promise.mapSeries(json, (object) => {
     return treatQuery(object.data)
@@ -61,8 +63,7 @@ function fix(json, cb){
         ];
         return Promise.all(results)
       })
-      .then(([instance, query]) => {
-        instance = isArray(instance)? instance[0]: instance;
+      .then(([[instance], query]) => {
         let associations = Promise.map(Object.keys(query.associations), (key) => {
           let assignment = camelCase('set ' + key);
           return instance[assignment](query.associations[key]);
@@ -79,6 +80,10 @@ function fix(json, cb){
       .then(([objectID]) => {
         return objectID;
       })
+      .catch((err) => {
+        error(err);
+        throw err;
+      });
   })
    .asCallback(cb);
 }
