@@ -7,6 +7,8 @@ const camelCase = require('lodash/camelCase');
 const isArray = require('lodash/isArray');
 const pickBy = require('lodash/pickBy');
 const omitBy = require('lodash/omitBy');
+const omit = require('lodash/omit');
+const indexOf = require('lodash/indexOf');
 const retry = require('bluebird-retry');
 const debug = require('debug');
 
@@ -32,11 +34,13 @@ function getValue(attrib){
   }
 }
 
-function treatQuery(data){
-  let query = {};
+function treatQuery(object){
+  let query = {},
+    data = object.data;
   for (let attrib in data) {
     query[attrib] = getValue(data[attrib]);
   }
+  query.exclude = object.exclude? object.exclude : [];
   return Promise.props(query);
 }
 
@@ -44,26 +48,44 @@ function fix(json, cb){
   const error = debug('spore:seed')
   json = ensureArray(json);
   return Promise.mapSeries(json, (object) => {
-    return treatQuery(object.data)
+    return treatQuery(object)
       .then((query) => {
         let processedQuery = {
           attributes: new Promise(function(resolve, reject) {
             resolve(omitBy(query, isArray));
           }),
           associations: new Promise(function(resolve, reject) {
-            resolve(pickBy(query, isArray));
+            let assoc = pickBy(query, isArray);
+            return resolve(omit(assoc, ['exclude']))
           }),
+          finder: new Promise(function(resolve, reject) {
+            let attributes = omitBy(query, (attrib) => {
+              return (isArray(attrib) || indexOf(query.exclude, attrib) > -1)
+            });
+            return resolve(attributes);
+          })
         };
         return Promise.props(processedQuery);
       })
       .then((query) => {
         let results = [
-          global[object.model].findOrCreate({where: query.attributes}),
+          global[object.model].findOne({where: query.finder}),
           query,
         ];
         return Promise.all(results)
       })
-      .then(([[instance], query]) => {
+      .then(([instance, query]) => {
+        let results = [
+          query
+        ];
+        if(!instance){
+          results.push(global[object.model].create(query.attributes));
+        }else{
+          results.push(instance.update(query.attributes, {returning:true}));
+        }
+        return Promise.all(results);
+      })
+      .then(([query, instance]) => {
         let associations = Promise.map(Object.keys(query.associations), (key) => {
           let assignment = camelCase('set ' + key);
           return instance[assignment](query.associations[key]);
@@ -75,7 +97,7 @@ function fix(json, cb){
           return Promise.resolve([objectCreated.id]);
         }
         let promiseFunction = Promise.promisify(object.afterCreate);
-        return Promise.all([objectCreated.id, promiseFunction(objectCreated)]);
+        return Promise.all(objectCreated.id, promiseFunction(objectCreated));
       })
       .then(([objectID]) => {
         return objectID;
