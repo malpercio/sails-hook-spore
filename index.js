@@ -97,7 +97,7 @@ function fix(json, cb){
           return Promise.resolve([objectCreated.id]);
         }
         let promiseFunction = Promise.promisify(object.afterCreate);
-        return Promise.all(objectCreated.id, promiseFunction(objectCreated));
+        return Promise.all([objectCreated.id, promiseFunction(objectCreated)]);
       })
       .then(([objectID]) => {
         return objectID;
