@@ -103,6 +103,7 @@ function fix(json, cb){
         return objectID;
       })
       .catch((err) => {
+        console.log(err);
         error(err);
         throw err;
       });
@@ -146,10 +147,10 @@ function seedAllC(req, res){
 }
 
 function seedModel(model, data, cb){
-  if(!data && sails.config.generators[model]){
+  if(!data && sails.config.generators && sails.config.generators[model]){
     return seed(req.params.model, req.body).asCallback(cb);
   }
-  return seedModel(data).asCallback(cb);;
+  return seedModel(data).asCallback(cb);
 }
 
 function seedModelC(req, res){
@@ -283,10 +284,10 @@ module.exports = (sails) => {
     routes: {
       before: {
         'get /db/all': seedAllC,
+        'post /db/query': seedQueryC,
         'post /db/:model': seedModelC,
         'delete /db/all': unseedAllC,
         'delete /db/:model': unseedModelC,
-        'post /db/query': seedQueryC,
       },
     },
 
