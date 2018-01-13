@@ -37,11 +37,12 @@ function getValue(attrib){
 function treatQuery(object){
   let query = {},
     data = object.data;
+  const virtual = object.virtual? object.virtual : {};
   for (let attrib in data) {
     query[attrib] = getValue(data[attrib]);
   }
   query.exclude = object.exclude? object.exclude : [];
-  return Promise.props(query);
+  return Promise.all([Promise.props(query), virtual]);
 }
 
 function fix(json, cb){
@@ -49,11 +50,12 @@ function fix(json, cb){
   json = ensureArray(json);
   return Promise.mapSeries(json, (object) => {
     return treatQuery(object)
-      .then((query) => {
+      .then(([query, virtual]) => {
         let processedQuery = {
           attributes: new Promise(function(resolve, reject) {
             resolve(omitBy(query, isArray));
           }),
+          virtual: virtual,
           associations: new Promise(function(resolve, reject) {
             let assoc = pickBy(query, isArray);
             return resolve(omit(assoc, ['exclude']))
@@ -79,6 +81,9 @@ function fix(json, cb){
           query
         ];
         if(!instance){
+          for(const name in query.virtual){
+            query.attributes[name] = query.virtual[name];
+          }
           results.push(global[object.model].create(query.attributes));
         }else{
           results.push(instance.update(query.attributes, {returning:true}));
